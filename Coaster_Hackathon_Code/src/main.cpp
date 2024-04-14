@@ -9,7 +9,7 @@
 #include <Adafruit_Sensor.h>
 #include <Wire.h>
 #include <USB.h>
-
+#include <ArduinoJson.h>
 #define NUM_LEDS 9 
 #define loopTime 100
 Adafruit_MPU6050 mpu;
@@ -29,7 +29,7 @@ enum subState
 {
   GOOD,
   BAD,
-  add_more_later_if_needed
+  OTHER
 };
 
 states curState = LOCK; // change default to music later on 
@@ -102,6 +102,37 @@ void webServerSetup()
   request->redirect("/generate_204");
   curState = LOCK;
   curSubState = BAD; });
+
+
+
+  server.on("/current_state", HTTP_GET, [](AsyncWebServerRequest *request) {
+    DynamicJsonDocument doc(256);
+    doc["curState"] = curState;  
+    doc["curSubState"] = curSubState == GOOD ? "GOOD" : "BAD";
+    String jsonString;
+    serializeJson(doc, jsonString);
+
+    request->send(200, "application/json", jsonString);
+  });
+
+server.on("/state_change", HTTP_POST, [](AsyncWebServerRequest *request) {
+    String body = request->getParam(0)->value();
+    USBSerial.println("state change route called: ");
+    USBSerial.println(body);
+    if (body == "lockButton"){
+      curState = LOCK;
+    }
+    else if (body == "musicButton"){
+      curState = MUSIC;
+    }
+    else if (body == "cupLocationButton"){
+      curState = LOCATION;
+    }
+    else {
+      curState = LOCK; // default to lock if nothing else 
+    }
+});
+
 
   // ---------------------------------------------------------------- //
 
@@ -227,6 +258,36 @@ void location(sensors_event_t a, sensors_event_t g) {
   USBSerial.println("Picked up, should turn off now...");
 
 }
+
+void ledLoop_Blink() {
+
+  for (int j = 0; j < 5; j++) { 
+
+    for (int i = 0; i < NUM_LEDS; i++) {
+        leds[i] = CRGB::Pink;
+        FastLED.show();
+        delay(loopTime);
+        leds[i] = CRGB::Black;
+        delay(loopTime); 
+    }
+
+  }
+
+
+  leds[NUM_LEDS - 1] = CRGB::Black;
+  FastLED.show();
+
+  for (int j = 0; j < 2; j++) {
+    fill_solid(leds, NUM_LEDS, CRGB::Green);
+    FastLED.show();
+    delay(300); 
+    // Turn all LEDs off
+    fill_solid(leds, NUM_LEDS, CRGB::Black);
+    FastLED.show();
+    delay(300); 
+  }
+
+}
 void setup() {
 
   USBSerial.begin(115200);
@@ -275,34 +336,31 @@ void loop() {
 
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
-  switch (curState) {
-    case LOCK: { 
 
-      bool lockState = accelMove(a,g); 
-      switch (lockState) {
-      case true:
+ switch (curState) {
+    case LOCK: { 
+      bool lockState = accelMove(a, g); 
+      USBSerial.print("lock state "); // Correct placement
+      USBSerial.println(lockState);
+      if (lockState) {
           curSubState = GOOD; 
-          USBSerial.println("Safe");
-          break;
-      case false:
+      } else {
           curSubState = BAD; // currently swaps based on accel solely, need to either be one and done or user safe switch 
-          USBSerial.println("Not safe");
-          break;
       }
       break;
-
     }
-
     case MUSIC: {
-
+      USBSerial.println("music state ");
+      curSubState = OTHER;      
       break;
     }
     case LOCATION:
-
-      location(a,g);
+      USBSerial.println("location state "); // Updated the text to match the case
+      curSubState = OTHER;
+      ledLoop_Blink();
       break;
-  }
-    
+}
+
 
 
 }

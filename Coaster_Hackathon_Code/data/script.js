@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
-
+    const goodLock = document.getElementById("goodLock");
+    const badLock = document.getElementById("badLock");
     
     const menuButtons = [
         'lockButton',
@@ -31,6 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const functionToCall = functionMap[event.currentTarget.id];
             if (functionToCall) {
                 functionToCall();
+                sendData(event.currentTarget.id); 
             }
 
             }   
@@ -90,6 +92,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 option.classList.add('hidden');
             });
             cupLocationOptions.classList.remove('hidden');
+            goodLock.classList.add('selected');
+            badLock.classList.remove('red-glow');
         }
 
 
@@ -103,40 +107,69 @@ document.addEventListener("DOMContentLoaded", () => {
         if(lockOptions) {
             document.querySelectorAll('.options').forEach(function(option) {
                 option.classList.add('hidden');
+
+
             });
             lockOptions.classList.remove('hidden');
+            goodLock.classList.add('selected');
+            badLock.classList.remove('red-glow');
         }
     }
     
+    function sendData(buttonId) {
+        fetch(`/state_change/?param1=${buttonId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+        })
+        .then(response => {
+            if (!response.ok) { throw new Error('Network response was not ok'); }
+            return response.json(); // or .text() if you don't need a JSON response
+        })
+        .then(data => {
+            console.log('Success:', data);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    }
 
-    const goodLock = document.getElementById("goodLock");
-    const badLock = document.getElementById("badLock");
 
 
-    goodLock.addEventListener("click", () => {
-        fetch("/lockGood", { method: 'POST' })
-            .then(() => {
-                console.log("POST request to lockGood sent successfully");
-                goodLock.classList.add('red-glow');
-                badLock.classList.remove('red-glow');
-            })
-            .catch(error => {
-                console.error("Error sending POST request to lockGood:", error);
-            });
-    });
-    
-    // Handler for "Bad" lock button
-    badLock.addEventListener("click", () => {
-        fetch("/lockBad", { method: 'POST' })
-            .then(() => {
-                console.log("POST request to lockBad sent successfully");
-                badLock.classList.add('red-glow');
-                goodLock.classList.remove('red-glow');
-            })
-            .catch(error => {
-                console.error("Error sending POST request to lockBad:", error);
-            });
-    });
 
+
+    console.log("Initialized!");
+    fetchData();
 });
 
+// Poll the server every 2.5 seconds
+setInterval(fetchData, 2500);
+
+function fetchData() {
+  fetch('/current_state', { method: 'GET' })
+    .then(response => {
+      if (!response.ok) { throw new Error('Network response was not ok'); }
+      return response.json(); // Parse response as JSON
+    })
+    .then(data => {
+      console.log("Updated state:", data);
+      updateUI(data); // Function to handle UI updates based on state
+      
+      })
+    .catch(error => {
+      console.error("Error fetching state:", error);
+    });
+}
+
+function updateUI(data) {
+  const goodLock = document.getElementById("goodLock");
+  const badLock = document.getElementById("badLock");
+
+  if (data.curSubState === 'GOOD') {
+
+  } else if (data.curSubState === 'BAD') {
+    badLock.classList.add('red-glow');
+    goodLock.classList.remove('selected');
+  }
+}
