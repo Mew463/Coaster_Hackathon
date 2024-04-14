@@ -36,9 +36,9 @@ states curState = LOCK; // change default to music later on
 subState curSubState = GOOD;
 
 void webServerSetup()
-{   
-  
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+{
+  // This is a super simple page that will be served up any time the root location is requested.  Get here intentionally by typing in the IP address.
+   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
      request->send(SPIFFS, "/index.html");
      USBSerial.println("requested /");
    });
@@ -60,6 +60,50 @@ void webServerSetup()
   // Route to load java script file SUPER IMPORTANT!!
   server.on("/script.js", HTTP_GET, [](AsyncWebServerRequest *request)
             { request->send(SPIFFS, "/script.js", "text/javascript"); });
+
+  // Routes ---------------------------------------------------------------- //
+
+
+
+  server.on("/lockGood", HTTP_POST, [](AsyncWebServerRequest *request)
+          {
+  USBSerial.println("Lock mode enabled! Default good");
+  request->redirect("/generate_204");
+  curState = LOCK;
+  curSubState = GOOD;  });
+
+  server.on("/lockBad", HTTP_POST, [](AsyncWebServerRequest *request)
+          {
+  USBSerial.println("Danger, cup moved...");
+  request->redirect("/generate_204");
+  curState = LOCK;
+  curSubState = BAD;  });
+
+  
+
+
+
+  server.on("/music", HTTP_POST, [](AsyncWebServerRequest *request)
+          {
+  USBSerial.println("Music mode enabled!");
+  request->redirect("/generate_204");
+  curState = MUSIC; });
+
+  server.on("/location", HTTP_POST, [](AsyncWebServerRequest *request)
+          {
+  USBSerial.println("Location mode enabled!");
+  request->redirect("/generate_204");
+  curState = LOCATION; });
+
+
+  server.on("/lock", HTTP_POST, [](AsyncWebServerRequest *request)
+          {
+  USBSerial.println("Lock changed to bad - was moved!");
+  request->redirect("/generate_204");
+  curState = LOCK;
+  curSubState = BAD; });
+
+  // ---------------------------------------------------------------- //
 
   server.begin(); // Starts the server process
 
@@ -202,16 +246,62 @@ void setup() {
   webServerSetup(); // Configures the behavior of the web server
   
 
+  // LED setup 
+  FastLED.addLeds<WS2812B, 3, GRB>(leds,9).setCorrection(TypicalLEDStrip);
+  FastLED.setBrightness(100);
 
+  USBSerial.println("Adafruit MPU6050 test!");
+
+  // Try to initialize!
+  Wire.begin(5,6);
+  if (!mpu.begin()) {
+    while (1) {
+      delay(100);
+      USBSerial.println("Failed to find MPU6050 chip");
+    }
+  }
+  USBSerial.println("MPU6050 Found!");
+
+  ledStartup();
+  delay(1000);
 }
+
 void loop() {
 
   dnsServer.processNextRequest();         //Without this, the connected device will simply timeout trying to reach the internet
-  USBSerial.println("loop X: ");
-  delay(500);
+ 
 
   // put your main code here, to run repeatedly:
 
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+  switch (curState) {
+    case LOCK: { 
+
+      bool lockState = accelMove(a,g); 
+      switch (lockState) {
+      case true:
+          curSubState = GOOD; 
+          USBSerial.println("Safe");
+          break;
+      case false:
+          curSubState = BAD; // currently swaps based on accel solely, need to either be one and done or user safe switch 
+          USBSerial.println("Not safe");
+          break;
+      }
+      break;
+
+    }
+
+    case MUSIC: {
+
+      break;
+    }
+    case LOCATION:
+
+      location(a,g);
+      break;
+  }
     
 
 
