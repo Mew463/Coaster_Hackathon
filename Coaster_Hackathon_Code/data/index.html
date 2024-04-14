@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Device Control Panel</title>
+        <link rel="stylesheet" type="text/css" href="main.css">
+    </head>
+
+    <body class="fade-in dark-theme">
+        <h1> Control Panel</h1>
+        
+        <div class="container">
+                <ul class="menu">
+                    <li><button id="lockButton">LOCK</button></li>
+                    <li><button id="musicButton">MUSIC</button></li>
+                    <li><button id="cupLocationButton">CUP LOCATION</button></li>
+                </ul>
+
+        </div>
+            <button id="themeToggle">Toggle Dark/Light Mode</button>
+            <button id="neonToggle">Toggle Neon Mode</button>
+
+                
+        <!-- Hidden option sets -->
+
+            <div id="lockOptions" class="fade-in-quick options hidden">
+                <h2>Lock Options</h2>
+                <ul>
+                    <li id="goodLock" class="option-item selected">Good</li>
+                    <li id="badLock" class="option-item">Bad</li>
+                </ul>
+            </div>
+            
+            <div id="musicOptions" class="fade-in-quick options hidden">
+                <h2>Music Options</h2>
+                <ul>
+                    <li id="musConn" class="option-item selected">Music connected</li>
+                    <li id="musNotConn" class="option-item">Music not connected</li>
+                </ul>
+            </div>
+            
+            <div id="cupLocationOptions" class="fade-in-quick options hidden">
+                <h2>Cup locations options</h2>
+                <ul>
+                    <li id="cupBlink" class="option-item selected">Cup blinking</li>
+                </ul>
+            </div>
+            
+            
+
+        <!-- Background shapes -->
+
+
+        <div class="neon-background">
+            <div class="shape shape1"></div>
+            <div class="shape shape2"></div>
+            <div class="shape shape3"></div>
+            <!-- Add more shapes!!! But later -->
+        </div>
+        
+
+        <script src="script.js"></script>
+
+    </body>
+</html>
+
+
